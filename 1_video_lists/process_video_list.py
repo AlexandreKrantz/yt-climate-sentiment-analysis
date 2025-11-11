@@ -2,10 +2,7 @@ import csv
 import re
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
-
-# Replace with your YouTube Data API key
-API_KEY = 'AIzaSyCGtBUDsSVTvdKu5WCc7GkMuMdyRrUAgT0'
-
+from private import API_KEY
 
 def extract_video_id(url):
     """Extract video ID from various YouTube URL formats."""

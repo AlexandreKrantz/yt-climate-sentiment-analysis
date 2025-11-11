@@ -3,9 +3,7 @@ import pandas as pd
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 import time
-
-# Replace with your YouTube Data API key
-API_KEY = 'AIzaSyCGtBUDsSVTvdKu5WCc7GkMuMdyRrUAgT0'
+from private import API_KEY
 
 def get_video_comments(youtube, video_id, max_comments=1000):
     """Fetch top-level comments for a video (no replies)."""

@@ -1,5 +1,6 @@
 import csv
 import re
+from datetime import datetime
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from private import API_KEY
@@ -32,9 +33,9 @@ def get_video_data(youtube, video_id):
         video = video_response['items'][0]
         channel_id = video['snippet']['channelId']
         
-        # Get channel details for subscriber count
+        # Get channel details for subscriber count and country
         channel_response = youtube.channels().list(
-            part='statistics',
+            part='statistics,brandingSettings',
             id=channel_id
         ).execute()
         
@@ -43,10 +44,17 @@ def get_video_data(youtube, video_id):
         
         channel = channel_response['items'][0]
         
+        # Extract country from brandingSettings
+        country = 'N/A'
+        if 'brandingSettings' in channel and 'channel' in channel['brandingSettings']:
+            country = channel['brandingSettings']['channel'].get('country', 'N/A')
+        
         return {
             'video_id': video_id,
             'video_name': video['snippet']['title'],
             'channel_name': video['snippet']['channelTitle'],
+            'channel_country': country,
+            'published_at': video['snippet']['publishedAt'],
             'subscribers': channel['statistics'].get('subscriberCount', 'N/A'),
             'views': video['statistics'].get('viewCount', '0'),
             'comments': video['statistics'].get('commentCount', '0'),
@@ -66,7 +74,7 @@ def enrich_csv(input_file, output_file, api_key):
         
         # Prepare output fieldnames
         fieldnames = reader.fieldnames + [
-            'video_id', 'video_name', 'channel_name', 'subscribers', 
+            'video_id', 'video_name', 'channel_name', 'channel_country', 'published_at', 'subscribers', 
             'views', 'comments', 'likes'
         ]
         
@@ -87,13 +95,23 @@ def enrich_csv(input_file, output_file, api_key):
                         # Filter: only include videos with at least 100 comments
                         try:
                             comment_count = int(data['comments'])
-                            if comment_count >= 100:
-                                rows.append(row)
-                                print(f"  ✓ Added (comments: {comment_count})")
-                            else:
+                            if comment_count < 100:
                                 print(f"  ✗ Skipped (comments: {comment_count} < 100)")
+                                continue
                         except (ValueError, TypeError):
                             print(f"  ✗ Skipped (invalid comment count)")
+                            continue
+                        
+                        # Filter: only include videos published since 2023
+                        try:
+                            published_date = datetime.fromisoformat(data['published_at'].replace('Z', '+00:00'))
+                            if published_date.year >= 2023:
+                                rows.append(row)
+                                print(f"  ✓ Added (comments: {comment_count}, published: {published_date.strftime('%Y-%m-%d')}, country: {data['channel_country']})")
+                            else:
+                                print(f"  ✗ Skipped (published: {published_date.strftime('%Y-%m-%d')} < 2023)")
+                        except (ValueError, TypeError):
+                            print(f"  ✗ Skipped (invalid publication date)")
                     else:
                         print(f"  ✗ Failed to fetch data")
                 else:
@@ -109,7 +127,7 @@ def enrich_csv(input_file, output_file, api_key):
         writer.writerows(rows)
     
     print(f"\nEnrichment complete! Output saved to {output_file}")
-    print(f"Total videos processed: {len(rows)} (filtered to videos with ≥100 comments)")
+    print(f"Total videos processed: {len(rows)} (filtered to videos with ≥100 comments published since 2023)")
 
 if __name__ == '__main__':
     # Configuration

@@ -104,7 +104,7 @@ if __name__ == '__main__':
     # Configuration
     INPUT_FILE = 'video_list_enhanced.csv'
     OUTPUT_FILE = 'video_comments.csv'
-    MAX_COMMENTS_PER_VIDEO = 1000
+    MAX_COMMENTS_PER_VIDEO = 25000
     
     if API_KEY == 'YOUR_API_KEY_HERE':
         print("Error: Please set your YouTube Data API key in the API_KEY variable.")
